@@ -53,7 +53,7 @@ li button:hover,li button:focus-visible{background:#003311;color:#00ff66;padding
 .info-title{font-size:14px;font-weight:700;color:#00ff66;text-shadow:0 0 6px rgba(0,255,102,.5);margin:0}
 .info-controls{display:flex;gap:6px}
 .info-btn{background:#04180a;border:1px solid #00aa44;color:#00ff66;border-radius:3px;width:26px;height:26px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:12px;font-weight:700}
-.info-btn:hover,.info-btn.fav-active{background:#004d1a;border-color:#00ffff;color:#00ffff;box-shadow:0 0 8px rgba(0,255,255,.5)}
+.info-btn:hover{background:#004d1a;border-color:#00ff66;box-shadow:0 0 8px rgba(0,255,102,.5)}
 .info-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:11px}
 .info-box{background:rgba(2,10,4,.6);border:1px solid #003311;padding:4px 6px;border-radius:2px}
 .info-box span{display:block;color:#00aa44;font-size:9px;text-transform:uppercase}
@@ -76,7 +76,6 @@ li button:hover,li button:focus-visible{background:#003311;color:#00ff66;padding
 <select id="country"><option value="">Select sector or click globe ocean</option></select>
 <div id="above" aria-live="polite"><p>Select sector to initialize satellite trace.</p></div>
 <button id="clear">Clear Sector</button>
-<div class="sec"><b>[FAVORITES]</b><ul id="fav-list"></ul></div>
 <div class="sec" id="groups"></div>
 <div class="sec vid"><b>[GLOBAL_FEEDS]</b><br>
 <button data-c="UCLA_DiR1FfKNvjuUpBHmylQ">NASA</button><button data-c="UCtI0Hodo5o5dUb67FeUjDeA">SpaceX</button><button data-c="">Close</button>
@@ -84,7 +83,7 @@ li button:hover,li button:focus-visible{background:#003311;color:#00ff66;padding
 </div>
 </div>
 <div id="info-panel">
-<div class="info-header"><div class="info-title" id="info-name">TARGET</div><div class="info-controls"><button class="info-btn" id="info-fav" title="Toggle Favorite">☆</button><button class="info-btn" id="info-dock" title="Dock Panel Side">⧉</button><button class="info-btn" id="info-close" title="Stop Tracking & Close">✕</button></div></div>
+<div class="info-header"><div class="info-title" id="info-name">TARGET</div><div class="info-controls"><button class="info-btn" id="info-dock" title="Dock Panel Side">⧉</button><button class="info-btn" id="info-close" title="Stop Tracking & Close">✕</button></div></div>
 <div class="info-grid">
 <div class="info-box"><span>Group</span><b id="info-group">-</b></div>
 <div class="info-box"><span>Altitude</span><b id="info-alt">-</b></div>
@@ -131,33 +130,10 @@ function fromTle(a){const sr=satellite.twoline2satrec(a.line1,a.line2);return{na
 let objs=[],note="",real=false;
 try{const r=await fetch("snapshot.json",{cache:"no-store"});if(r.ok){const s=await r.json();objs=s.objects.map(a=>{try{return fromTle(a)}catch(e){return null}}).filter(Boolean);real=objs.length>0;note="[REAL_TIME] "+objs.length+" telemetry targets online."}}catch(e){}
 if(!objs.length){objs=demo();note="[SIMULATION_MODE] Telemetry fallback demo active."}
-
-const clock=viewer.clock;
-clock.clockStep=Cesium.ClockStep.SYSTEM_CLOCK_MULTIPLIER;
-clock.clockRange=Cesium.ClockRange.UNBOUNDED;
-clock.currentTime=Cesium.JulianDate.now();
-clock.multiplier=1;
-clock.shouldAnimate=true;
-
-let favs=JSON.parse(localStorage.getItem("sherman_favs")||"[]");
-function saveFavs(){localStorage.setItem("sherman_favs",JSON.stringify(favs));renderFavs()}
-function isFav(name){return favs.includes(name)}
-function toggleFav(name){if(isFav(name)){favs=favs.filter(x=>x!==name)}else{favs.push(name)}saveFavs();if(trackedSat&&trackedSat.name===name)updateFavBtn()}
-
-function renderFavs(){
-const ul=document.getElementById("fav-list");ul.innerHTML="";
-if(!favs.length){ul.innerHTML="<li style='padding:5px 8px;color:#008833;font-size:10px;'>No stored target bookmarks</li>";return}
-objs.filter(o=>favs.includes(o.name)).forEach(o=>{
-const li=document.createElement("li"),b=document.createElement("button");
-b.textContent="★ "+o.name;b.onclick=()=>selectSatellite(o);li.appendChild(b);ul.appendChild(li)
-})
-}
-
+const clock=viewer.clock;clock.clockRange=Cesium.ClockRange.UNBOUNDED;clock.multiplier=1;clock.shouldAnimate=true;
 const groups={};
 objs.forEach(o=>{const pos=new Cesium.CallbackProperty(time=>{const d=Cesium.JulianDate.toDate(time),p=o.fn(d);if(!p)return Cesium.Cartesian3.ZERO;return Cesium.Cartesian3.fromDegrees(p.lon,p.lat,p.alt*1000)},false);o.color=COL[o.group]||Cesium.Color.fromCssColorString('#00ff66');o.entity=viewer.entities.add({name:o.name,position:pos,point:{pixelSize:6,color:o.color,outlineColor:Cesium.Color.BLACK,outlineWidth:1},label:{show:false,text:o.name,font:"11px Fira Code, monospace",pixelOffset:new Cesium.Cartesian2(0,-16),showBackground:true,backgroundColor:Cesium.Color.BLACK.withAlpha(.8)},path:{show:false,leadTime:5400,trailTime:5400,width:1.5,material:o.color.withAlpha(.65)}});o.entity.isSat=true;o.entity.satData=o;(groups[o.group]=groups[o.group]||[]).push(o)});
 const live=objs.filter(o=>o.entity);document.getElementById("note").textContent=note;
-renderFavs();
-
 const gdiv=document.getElementById("groups");
 Object.keys(groups).forEach(g=>{const l=document.createElement("label");l.className="g";const cb=document.createElement("input");cb.type="checkbox";cb.checked=true;cb.onchange=()=>{groups[g].forEach(o=>o.entity.show=cb.checked);refresh()};l.append(cb,(NAMES[g]||g)+" ["+groups[g].length+"]");gdiv.appendChild(l);const ul=document.createElement("ul");groups[g].slice(0,60).forEach(o=>{const li=document.createElement("li"),b=document.createElement("button");b.textContent=o.name;b.onclick=()=>selectSatellite(o);li.appendChild(b);ul.appendChild(li)});gdiv.appendChild(ul)});
 let countries=[],hl=[],cur=null;
@@ -166,14 +142,10 @@ const inCountry=(c,lon,lat)=>c.polys.some(p=>inRing(lon,lat,p[0])&&!p.slice(1).s
 try{loaderText.textContent="[SYS_MAP] Loading vector sector boundaries...";const topo=await(await fetch("https://cdn.jsdelivr.net/npm/world-atlas@2.0.2/countries-110m.json")).json();const fc=topojson.feature(topo,topo.objects.countries);countries=fc.features.filter(f=>f.geometry&&f.properties.name).map(f=>({name:f.properties.name,polys:f.geometry.type==="Polygon"?[f.geometry.coordinates]:f.geometry.coordinates}));countries.sort((a,b)=>a.name.localeCompare(b.name));const sel=document.getElementById("country");countries.forEach((c,i)=>{const o=document.createElement("option");o.value=i;o.textContent=c.name;sel.appendChild(o);c.polys.forEach(p=>viewer.entities.add({polyline:{positions:Cesium.Cartesian3.fromDegreesArrayHeights(p[0].flatMap(q=>[q[0],q[1],4000])),width:1,material:Cesium.Color.fromCssColorString("#00ff66").withAlpha(.35)}}))})}catch(e){document.getElementById("above").innerHTML="<p>[ERROR] Could not load sector map boundaries.</p>"}
 function pickCountry(c,fly){hl.forEach(e=>viewer.entities.remove(e));hl=[];cur=c;document.getElementById("country").value=c?countries.indexOf(c):"";if(c){c.polys.forEach(p=>hl.push(viewer.entities.add({polygon:{hierarchy:new Cesium.PolygonHierarchy(Cesium.Cartesian3.fromDegreesArray(p[0].flat()),p.slice(1).map(h=>new Cesium.PolygonHierarchy(Cesium.Cartesian3.fromDegreesArray(h.flat())))),material:Cesium.Color.fromCssColorString("#00ff66").withAlpha(.2),height:0}})));if(fly){let a=1e9,b=1e9,x=-1e9,y=-1e9;c.polys.forEach(p=>p[0].forEach(q=>{a=Math.min(a,q[0]);x=Math.max(x,q[0]);b=Math.min(b,q[1]);y=Math.max(y,q[1])}));if(x-a>180){a=-180;x=180}const pad=Math.max(3,(x-a)*.4);viewer.camera.flyTo({destination:Cesium.Rectangle.fromDegrees(Math.max(-180,a-pad),Math.max(-85,b-pad),Math.min(180,x+pad),Math.min(85,y+pad))})}}refresh()}
 function refresh(){const el=document.getElementById("above"),t=viewer.clock.currentTime,hits=[],d=Cesium.JulianDate.toDate(t);live.forEach(o=>{let hit=false;if(cur&&o.entity.show){const p=o.fn(d);if(p){hit=inCountry(cur,p.lon,p.lat);if(hit)hits.push({o,alt:Math.round(p.alt)})}}const e=o.entity;e.point.pixelSize=hit?12:6;e.point.color=hit?Cesium.Color.fromCssColorString("#00ffff"):o.color;e.label.show=hit;e.path.show=hit});if(!cur){el.innerHTML="<p>Select sector to initialize satellite trace.</p>";return}el.innerHTML=`<p><b>[${hits.length}]</b> ${real?"":"demo "}targets over sector <b>${cur.name}</b></p>`;const ul=document.createElement("ul");hits.sort((a,b)=>a.o.name.localeCompare(b.o.name)).forEach(h=>{const li=document.createElement("li"),b=document.createElement("button");b.textContent=`> ${h.o.name} | ${h.alt} km`;b.onclick=()=>selectSatellite(h.o);li.appendChild(b);ul.appendChild(li)});el.appendChild(ul)}
-
-let trackedSat=null;const infoPanel=document.getElementById("info-panel"),infoFavBtn=document.getElementById("info-fav");
-function updateFavBtn(){if(!trackedSat)return;const fav=isFav(trackedSat.name);infoFavBtn.textContent=fav?"★":"☆";infoFavBtn.classList.toggle("fav-active",fav)}
-function selectSatellite(o){trackedSat=o;viewer.trackedEntity=o.entity;viewer.selectedEntity=o.entity;infoPanel.style.display="block";updateInfo();updateFavBtn()}
+let trackedSat=null;const infoPanel=document.getElementById("info-panel");
+function selectSatellite(o){trackedSat=o;viewer.trackedEntity=o.entity;viewer.selectedEntity=o.entity;infoPanel.style.display="block";updateInfo()}
 function stopTracking(){trackedSat=null;viewer.trackedEntity=undefined;viewer.selectedEntity=undefined;infoPanel.style.display="none"}
 function updateInfo(){if(!trackedSat)return;const d=Cesium.JulianDate.toDate(viewer.clock.currentTime),p=trackedSat.fn(d);if(!p)return;document.getElementById("info-name").textContent=trackedSat.name;document.getElementById("info-group").textContent=trackedSat.group;document.getElementById("info-alt").textContent=p.alt+" km";document.getElementById("info-lat").textContent=p.lat.toFixed(2)+"°";document.getElementById("info-lon").textContent=p.lon.toFixed(2)+"°";document.getElementById("info-vel").textContent=p.vel+" km/s";document.getElementById("info-period").textContent=p.period+" min"}
-
-infoFavBtn.onclick=()=>{if(trackedSat)toggleFav(trackedSat.name)};
 document.getElementById("info-close").onclick=stopTracking;document.getElementById("info-dock").onclick=()=>infoPanel.classList.toggle("docked-side");
 document.getElementById("country").onchange=e=>pickCountry(e.target.value===""?null:countries[+e.target.value],true);document.getElementById("clear").onclick=()=>pickCountry(null);
 viewer.screenSpaceEventHandler.setInputAction(m=>{const pk=viewer.scene.pick(m.position);if(pk&&pk.id&&pk.id.isSat){selectSatellite(pk.id.satData);return}const cart=viewer.camera.pickEllipsoid(m.position,viewer.scene.globe.ellipsoid);if(cart){const g=Cesium.Cartographic.fromCartesian(cart),lon=Cesium.Math.toDegrees(g.longitude),lat=Cesium.Math.toDegrees(g.latitude);const hitC=countries.find(c=>inCountry(c,lon,lat));pickCountry(hitC||null,false)}else pickCountry(null,false)},Cesium.ScreenSpaceEventType.LEFT_CLICK);
@@ -182,16 +154,7 @@ const btnPause=document.getElementById("btn-pause"),timeDisplay=document.getElem
 btnPause.onclick=()=>{clock.shouldAnimate=!clock.shouldAnimate;btnPause.textContent=clock.shouldAnimate?"❚❚":"▶";btnPause.classList.toggle("active",!clock.shouldAnimate)};
 document.getElementById("btn-live").onclick=()=>{clock.currentTime=Cesium.JulianDate.now();clock.multiplier=1;clock.shouldAnimate=true;btnPause.textContent="❚❚";btnPause.classList.remove("active");document.querySelectorAll(".speed-btn").forEach(b=>b.classList.toggle("active",b.dataset.s==="1"))};
 document.querySelectorAll(".speed-btn").forEach(b=>{b.onclick=()=>{const mult=parseFloat(b.dataset.s);clock.multiplier=mult;clock.shouldAnimate=true;btnPause.textContent="❚❚";btnPause.classList.remove("active");document.querySelectorAll(".speed-btn").forEach(x=>x.classList.remove("active"));b.classList.add("active")}});
-
-let lastRef=0;
-viewer.clock.onTick.addEventListener(()=>{
-const iso=Cesium.JulianDate.toDate(clock.currentTime).toISOString().replace("T"," ").slice(0,19)+" UTC";
-timeDisplay.textContent=iso;
-if(trackedSat)updateInfo();
-const now=Date.now();
-if(cur&&now-lastRef>1000){lastRef=now;refresh()}
-});
-
+let lastRef=0;viewer.clock.onTick.addEventListener(()=>{const now=Date.now(),iso=Cesium.JulianDate.toDate(clock.currentTime).toISOString().replace("T"," ").slice(0,19)+" UTC";timeDisplay.textContent=iso;if(trackedSat)updateInfo();if(cur&&now-lastRef>1000){lastRef=now;refresh()}});
 document.querySelectorAll(".vid button").forEach(b=>b.onclick=()=>{const c=b.dataset.c,v=document.getElementById("vframe");v.innerHTML=c?`<iframe src="https://www.youtube.com/embed/live_stream?channel=${c}&autoplay=1&mute=1" title="Live video" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe>`:""});
 setTimeout(()=>loader.classList.add("hidden"),800);
 })();
