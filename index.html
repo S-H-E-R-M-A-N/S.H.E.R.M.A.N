@@ -9,56 +9,99 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
-html,body,#globe{margin:0;width:100%;height:100%;overflow:hidden;background:#020503;font-family:'Fira Code','Courier New',Consolas,monospace;color:#00ff66}
-#panel{position:absolute;top:12px;left:12px;z-index:10;width:min(360px,calc(100% - 24px));max-height:calc(100% - 24px);overflow-y:auto;background:rgba(4,14,7,0.92);color:#00ff66;border:1px solid #00ff66;border-radius:4px;padding:14px;box-shadow:0 0 15px rgba(0,255,102,0.15),inset 0 0 15px rgba(0,255,102,0.05);backdrop-filter:blur(4px)}
-#panel::-webkit-scrollbar,ul::-webkit-scrollbar{width:6px}
-#panel::-webkit-scrollbar-track,ul::-webkit-scrollbar-track{background:#020804}
-#panel::-webkit-scrollbar-thumb,ul::-webkit-scrollbar-thumb{background:#008833;border-radius:3px}
-#panel::-webkit-scrollbar-thumb:hover,ul::-webkit-scrollbar-thumb:hover{background:#00ff66}
-h1{margin:0 0 4px;font-size:20px;letter-spacing:0.12em;text-transform:uppercase;text-shadow:0 0 8px rgba(0,255,102,0.6);color:#00ff66;display:flex;align-items:center;gap:6px}
-h1::before{content:'>';animation:blink 1s infinite}
+*{box-sizing:border-box}html,body,#globe{margin:0;width:100%;height:100%;overflow:hidden;background:#020503;font-family:'Fira Code','Courier New',Consolas,monospace;color:#00ff66;user-select:none}
+body::after{content:" ";display:block;position:absolute;top:0;left:0;bottom:0;right:0;background:linear-gradient(rgba(18,16,16,0) 50%,rgba(0,0,0,.25) 50%),linear-gradient(90deg,rgba(255,0,0,.03),rgba(0,255,0,.01),rgba(0,0,255,.03));z-index:99;background-size:100% 3px,6px 100%;pointer-events:none}
+#loader{position:fixed;inset:0;background:#020704;z-index:1000;display:flex;flex-direction:column;justify-content:center;align-items:center;color:#00ff66;transition:opacity .5s ease,visibility .5s}
+#loader.hidden{opacity:0;visibility:hidden;pointer-events:none}
+.spinner{width:50px;height:50px;border:3px solid #003311;border-top-color:#00ff66;border-radius:50%;animation:spin .8s linear infinite;margin-bottom:16px;box-shadow:0 0 15px rgba(0,255,102,.4)}
+@keyframes spin{to{transform:rotate(360deg)}}
+#loader-text{font-size:13px;letter-spacing:.1em;text-transform:uppercase;text-shadow:0 0 8px #00ff66}
+#panel-container{position:absolute;top:12px;left:12px;z-index:10;width:min(340px,calc(100vw - 24px));max-height:calc(100vh - 120px);display:flex;flex-direction:column}
+#header{background:rgba(4,14,7,.95);border:1px solid #00ff66;border-radius:4px 4px 0 0;padding:10px 12px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 0 15px rgba(0,255,102,.15);backdrop-filter:blur(4px)}
+#header h1{margin:0;font-size:18px;letter-spacing:.12em;text-transform:uppercase;text-shadow:0 0 8px rgba(0,255,102,.6);color:#00ff66;display:flex;align-items:center;gap:6px}
+#header h1::before{content:'>';animation:blink 1s infinite}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
-p{margin:0 0 8px;color:#00b347;font-size:11px;text-transform:uppercase;letter-spacing:0.05em}
+#hide{background:#04180a;border:1px solid #00aa44;color:#00ff66;padding:4px 10px;border-radius:3px;font-size:10px;cursor:pointer;text-transform:uppercase;transition:all .2s}
+#hide:hover{background:#004d1a;border-color:#00ff66;box-shadow:0 0 8px rgba(0,255,102,.4)}
+#panel-body{background:rgba(4,14,7,.92);border:1px solid #00ff66;border-top:none;border-radius:0 0 4px 4px;padding:12px;overflow-y:auto;max-height:calc(100vh - 180px);box-shadow:0 0 15px rgba(0,255,102,.15);backdrop-filter:blur(4px)}
+#panel-body.collapsed{display:none}
+#panel-body::-webkit-scrollbar,ul::-webkit-scrollbar{width:4px}
+#panel-body::-webkit-scrollbar-track,ul::-webkit-scrollbar-track{background:#020804}
+#panel-body::-webkit-scrollbar-thumb,ul::-webkit-scrollbar-thumb{background:#008833;border-radius:2px}
+#panel-body::-webkit-scrollbar-thumb:hover,ul::-webkit-scrollbar-thumb:hover{background:#00ff66}
+p{margin:0 0 8px;color:#00b347;font-size:11px;text-transform:uppercase;letter-spacing:.05em}
 select,button,input{font-family:inherit}
-select{width:100%;background:#031206;color:#00ff66;border:1px solid #00aa44;border-radius:3px;padding:6px 8px;outline:none;box-sizing:border-box}
-select:focus{border-color:#00ff66;box-shadow:0 0 8px rgba(0,255,102,0.4)}
+select{width:100%;background:#031206;color:#00ff66;border:1px solid #00aa44;border-radius:3px;padding:6px 8px;outline:none}
+select:focus{border-color:#00ff66;box-shadow:0 0 8px rgba(0,255,102,.4)}
 label.g{display:flex;gap:8px;align-items:center;margin:8px 0 4px;font-weight:600;font-size:12px;color:#00ff66;cursor:pointer}
 input[type="checkbox"]{accent-color:#00ff66;cursor:pointer}
-ul{list-style:none;margin:4px 0 8px;padding:0;max-height:20vh;overflow-y:auto;border:1px solid #004d1a;background:rgba(2,10,4,0.6);border-radius:3px}
-li button{display:block;width:100%;text-align:left;background:none;border:none;border-bottom:1px solid #00220a;color:#00cc52;padding:5px 8px;cursor:pointer;font-size:11px;transition:all 0.15s ease}
+ul{list-style:none;margin:4px 0 8px;padding:0;max-height:16vh;overflow-y:auto;border:1px solid #004d1a;background:rgba(2,10,4,.6);border-radius:3px}
+li button{display:block;width:100%;text-align:left;background:none;border:none;border-bottom:1px solid #00220a;color:#00cc52;padding:5px 8px;cursor:pointer;font-size:11px;transition:all .15s ease;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 li button:hover,li button:focus-visible{background:#003311;color:#00ff66;padding-left:12px;outline:none}
 .sec{border-top:1px dashed #006622;margin-top:10px;padding-top:10px}
-#above b{color:#00ffff;text-shadow:0 0 6px rgba(0,255,255,0.5)}
-.vid button,#clear{background:#04180a;color:#00ff66;border:1px solid #00aa44;border-radius:3px;padding:5px 10px;cursor:pointer;margin-right:6px;margin-top:4px;font-size:11px;text-transform:uppercase;letter-spacing:0.05em;transition:all 0.2s ease}
-.vid button:hover,#clear:hover{background:#004d1a;border-color:#00ff66;box-shadow:0 0 8px rgba(0,255,102,0.4)}
+#above b{color:#00ffff;text-shadow:0 0 6px rgba(0,255,255,.5)}
+.vid button,#clear{background:#04180a;color:#00ff66;border:1px solid #00aa44;border-radius:3px;padding:5px 10px;cursor:pointer;margin-right:4px;margin-top:4px;font-size:11px;text-transform:uppercase;transition:all .2s ease}
+.vid button:hover,#clear:hover{background:#004d1a;border-color:#00ff66;box-shadow:0 0 8px rgba(0,255,102,.4)}
 .vid iframe{width:100%;aspect-ratio:16/9;border:1px solid #00aa44;margin-top:8px;background:#000;border-radius:3px}
-#hide{float:right;background:#04180a;border:1px solid #00aa44;color:#00ff66;padding:2px 8px;border-radius:3px;font-size:10px;cursor:pointer;text-transform:uppercase}
-#hide:hover{background:#004d1a;border-color:#00ff66}
+#time-hud{position:absolute;bottom:12px;left:50%;transform:translateX(-50%);z-index:10;background:rgba(4,14,7,.95);border:1px solid #00ff66;border-radius:4px;padding:8px 14px;display:flex;align-items:center;gap:12px;box-shadow:0 0 15px rgba(0,255,102,.2);backdrop-filter:blur(4px);width:min(520px,calc(100vw - 24px))}
+.hud-btn{background:#04180a;border:1px solid #00aa44;color:#00ff66;border-radius:3px;padding:4px 8px;cursor:pointer;font-size:11px;transition:all .2s;display:flex;align-items:center;justify-content:center;min-width:32px}
+.hud-btn:hover,.hud-btn.active{background:#004d1a;border-color:#00ff66;box-shadow:0 0 8px rgba(0,255,102,.4)}
+#time-display{font-size:12px;color:#00ff66;text-shadow:0 0 6px rgba(0,255,102,.5);font-weight:600;white-space:nowrap;flex:1;text-align:center}
+#info-panel{position:absolute;top:12px;right:12px;z-index:11;width:min(300px,calc(100vw - 24px));background:rgba(4,14,7,.95);border:1px solid #00ff66;border-radius:4px;padding:12px;box-shadow:0 0 20px rgba(0,255,102,.25);backdrop-filter:blur(4px);display:none;transition:all .3s ease}
+#info-panel.docked-side{top:auto;bottom:80px;right:12px;width:280px}
+.info-header{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #006622;padding-bottom:6px;margin-bottom:8px}
+.info-title{font-size:14px;font-weight:700;color:#00ff66;text-shadow:0 0 6px rgba(0,255,102,.5);margin:0}
+.info-controls{display:flex;gap:6px}
+.info-btn{background:#04180a;border:1px solid #00aa44;color:#00ff66;border-radius:3px;width:26px;height:26px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:12px;font-weight:700}
+.info-btn:hover{background:#004d1a;border-color:#00ff66;box-shadow:0 0 8px rgba(0,255,102,.5)}
+.info-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:11px}
+.info-box{background:rgba(2,10,4,.6);border:1px solid #003311;padding:4px 6px;border-radius:2px}
+.info-box span{display:block;color:#00aa44;font-size:9px;text-transform:uppercase}
+.info-box b{color:#00ffff;font-size:11px}
 .cesium-widget-credits{display:none!important}
-.cesium-viewer-animationContainer,.cesium-viewer-timelineContainer{background:rgba(3,12,5,0.92)!important;border-top:1px solid #00ff66!important}
-.cesium-timeline-bar{background:#003311!important}
-.cesium-timeline-ticLabel{color:#00ff66!important;font-family:monospace!important}
 .cesium-navigation-help-button,.cesium-sceneModePicker-wrapper,.cesium-home-button,.cesium-fullscreenButton{background:#041408!important;border:1px solid #00aa44!important;fill:#00ff66!important}
 .cesium-button{background:#041408!important;border:1px solid #00aa44!important;fill:#00ff66!important;color:#00ff66!important}
-.cesium-button:hover{background:#003311!important;border-color:#00ff66!important;box-shadow:0 0 8px rgba(0,255,102,0.5)!important}
-.cesium-infoBox{background:rgba(4,14,7,0.95)!important;border:1px solid #00ff66!important;font-family:monospace!important;color:#00ff66!important}
-.cesium-infoBox-title{background:#003311!important;color:#00ff66!important}
+.cesium-button:hover{background:#003311!important;border-color:#00ff66!important;box-shadow:0 0 8px rgba(0,255,102,.5)!important}
+.cesium-infoBox{display:none!important}
 </style>
 </head>
 <body>
+<div id="loader"><div class="spinner"></div><div id="loader-text">[SYS_BOOT] Initializing Orbital Matrix...</div></div>
 <div id="globe"></div>
-<div id="panel">
-<button id="hide" aria-label="Hide panel">Hide</button>
-<h1>S.H.E.R.M.A.N</h1>
-<p id="note">[SYS_INIT] Loading telemetry...</p>
+<div id="panel-container">
+<div id="header"><h1>S.H.E.R.M.A.N</h1><button id="hide" aria-label="Toggle panel">Hide</button></div>
+<div id="panel-body">
+<p id="note">[SYS_INIT] Synchronizing orbital satellite stream...</p>
 <label for="country"><b>[TARGET_SECTOR]</b></label>
-<select id="country"><option value="">Select country sector or click map</option></select>
+<select id="country"><option value="">Select sector or click globe ocean</option></select>
 <div id="above" aria-live="polite"><p>Select sector to initialize satellite trace.</p></div>
 <button id="clear">Clear Sector</button>
 <div class="sec" id="groups"></div>
-<div class="sec vid"><b>[LIVE_FEED]</b><br>
+<div class="sec vid"><b>[GLOBAL_FEEDS]</b><br>
 <button data-c="UCLA_DiR1FfKNvjuUpBHmylQ">NASA</button><button data-c="UCtI0Hodo5o5dUb67FeUjDeA">SpaceX</button><button data-c="">Close</button>
 <div id="vframe"></div></div>
+</div>
+</div>
+<div id="info-panel">
+<div class="info-header"><div class="info-title" id="info-name">TARGET</div><div class="info-controls"><button class="info-btn" id="info-dock" title="Dock Panel Side">⧉</button><button class="info-btn" id="info-close" title="Stop Tracking & Close">✕</button></div></div>
+<div class="info-grid">
+<div class="info-box"><span>Group</span><b id="info-group">-</b></div>
+<div class="info-box"><span>Altitude</span><b id="info-alt">-</b></div>
+<div class="info-box"><span>Latitude</span><b id="info-lat">-</b></div>
+<div class="info-box"><span>Longitude</span><b id="info-lon">-</b></div>
+<div class="info-box"><span>Velocity</span><b id="info-vel">-</b></div>
+<div class="info-box"><span>Period</span><b id="info-period">-</b></div>
+</div>
+<div id="info-feed" style="margin-top:8px;"></div>
+</div>
+<div id="time-hud">
+<button class="hud-btn" id="btn-pause" title="Play/Pause">❚❚</button>
+<button class="hud-btn" id="btn-live" title="Reset to Live UTC Time">LIVE</button>
+<div id="time-display">2026-10-09 00:00:00 UTC</div>
+<button class="hud-btn speed-btn active" data-s="1">1x</button>
+<button class="hud-btn speed-btn" data-s="10">10x</button>
+<button class="hud-btn speed-btn" data-s="60">60x</button>
+<button class="hud-btn speed-btn" data-s="300">300x</button>
 </div>
 <script>
 window.CESIUM_BASE_URL="https://cdn.jsdelivr.net/npm/cesium@1.120.0/Build/Cesium/";
@@ -69,88 +112,49 @@ const ION_TOKEN="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJub25jZSI6InNqblJocy0wWV
 <script src="https://cdn.jsdelivr.net/npm/topojson-client@3.1.0/dist/topojson-client.min.js"></script>
 <script>
 (async()=>{
-const viewer=new Cesium.Viewer("globe",{baseLayer:false,baseLayerPicker:false,geocoder:false,homeButton:true,sceneModePicker:true,navigationHelpButton:false,infoBox:true,selectionIndicator:true,timeline:true,animation:true,fullscreenButton:true});
-try{
- if(ION_TOKEN){Cesium.Ion.defaultAccessToken=ION_TOKEN;viewer.imageryLayers.add(await Cesium.ImageryLayer.fromProviderAsync(Cesium.createWorldImageryAsync()))}
- else viewer.imageryLayers.add(Cesium.ImageryLayer.fromProviderAsync(Cesium.TileMapServiceImageryProvider.fromUrl(Cesium.buildModuleUrl("Assets/Textures/NaturalEarthII"))));
-}catch(e){console.warn("imagery failed",e)}
+const loader=document.getElementById("loader"),loaderText=document.getElementById("loader-text");
+const viewer=new Cesium.Viewer("globe",{baseLayer:false,baseLayerPicker:false,geocoder:false,homeButton:true,sceneModePicker:true,navigationHelpButton:false,infoBox:false,selectionIndicator:true,timeline:false,animation:false,fullscreenButton:true});
+const controller=viewer.scene.screenSpaceCameraController;
+controller.enableLook=false;controller.inertiaSpin=0.7;controller.inertiaTranslate=0.7;controller.inertiaZoom=0.7;controller.minimumZoomDistance=200000;controller.maximumZoomDistance=30000000;
+try{if(ION_TOKEN){Cesium.Ion.defaultAccessToken=ION_TOKEN;viewer.imageryLayers.add(await Cesium.ImageryLayer.fromProviderAsync(Cesium.createWorldImageryAsync()))}else viewer.imageryLayers.add(Cesium.ImageryLayer.fromProviderAsync(Cesium.TileMapServiceImageryProvider.fromUrl(Cesium.buildModuleUrl("Assets/Textures/NaturalEarthII"))));}catch(e){}
 viewer.scene.globe.enableLighting=true;
 const COL={NASA:Cesium.Color.fromCssColorString('#00ff66'),SpaceX:Cesium.Color.fromCssColorString('#00ffff'),Junk:Cesium.Color.fromCssColorString('#ff3355'),Other:Cesium.Color.fromCssColorString('#008833')};
 const NAMES={NASA:"NASA Orbitals",SpaceX:"SpaceX Fleet",Junk:"Space Debris",Other:"Other Trackers"};
 const MU=398600.4418,RE=6378.137,WE=7.2921159e-5,D=Math.PI/180;
-const start=Cesium.JulianDate.now(),startMs=Cesium.JulianDate.toDate(start).getTime();
-function circ(alt,inc,raan,ph){const r=RE+alt,n=Math.sqrt(MU/r**3);return d=>{const s=(d.getTime()-startMs)/1000,u=ph*D+n*s,c=Math.cos,sn=Math.sin,I=inc*D,R=raan*D;
-const x=c(R)*c(u)-sn(R)*sn(u)*c(I),y=sn(R)*c(u)+c(R)*sn(u)*c(I),z=sn(u)*sn(I);let lon=Math.atan2(y,x)-WE*s;lon=((lon+Math.PI)%(2*Math.PI)+2*Math.PI)%(2*Math.PI)-Math.PI;return{lat:Math.asin(z)/D,lon:lon/D,alt}}}
-function demo(){return[["ISS (demo)","NASA",420,51.6,40,10],["Hubble (demo)","NASA",535,28.5,200,80],["Terra (demo)","NASA",705,98.2,110,150],["Landsat 9 (demo)","NASA",705,98.2,60,330],
-["Starlink A (demo)","SpaceX",550,53,10,0],["Starlink B (demo)","SpaceX",560,97.6,150,120],["Crew Dragon (demo)","SpaceX",420,51.6,40,25],
-["Cosmos 2251 debris (demo)","Junk",790,74,300,40],["Fengyun-1C debris (demo)","Junk",850,98.8,20,200],["Iridium 33 debris (demo)","Junk",780,86.4,250,300]]
-.map(a=>({name:a[0],group:a[1],info:"Demo orbit simulation",fn:circ(a[2],a[3],a[4],a[5])}))}
-function fromTle(a){const sr=satellite.twoline2satrec(a.line1,a.line2);
-return{name:a.name,group:a.group,info:"Space-Track GP epoch "+a.epoch.slice(0,10),fn:d=>{const r=satellite.propagate(sr,d);if(!r.position)return null;
-const p=satellite.eciToGeodetic(r.position,satellite.gstime(d));return{lat:satellite.degreesLat(p.latitude),lon:satellite.degreesLong(p.longitude),alt:p.height}}}}
+const nowJulian=Cesium.JulianDate.now(),startMs=Cesium.JulianDate.toDate(nowJulian).getTime();
+function circ(alt,inc,raan,ph){const r=RE+alt,n=Math.sqrt(MU/Math.pow(r,3));return d=>{const s=(d.getTime()-startMs)/1000,u=ph*D+n*s,c=Math.cos,sn=Math.sin,I=inc*D,R=raan*D;const x=c(R)*c(u)-sn(R)*sn(u)*c(I),y=sn(R)*c(u)+c(R)*sn(u)*c(I),z=sn(u)*sn(I);let lon=Math.atan2(y,x)-WE*s;lon=((lon+Math.PI)%(2*Math.PI)+2*Math.PI)%(2*Math.PI)-Math.PI;const vel=Math.sqrt(MU/r),period=Math.round((2*Math.PI*Math.sqrt(Math.pow(r,3)/MU))/60);return{lat:Math.asin(z)/D,lon:lon/D,alt,vel:vel.toFixed(2),period}}}
+function demo(){return[["ISS (demo)","NASA",420,51.6,40,10],["Hubble (demo)","NASA",535,28.5,200,80],["Terra (demo)","NASA",705,98.2,110,150],["Landsat 9 (demo)","NASA",705,98.2,60,330],["Starlink A (demo)","SpaceX",550,53,10,0],["Starlink B (demo)","SpaceX",560,97.6,150,120],["Crew Dragon (demo)","SpaceX",420,51.6,40,25],["Cosmos 2251 debris (demo)","Junk",790,74,300,40],["Fengyun-1C debris (demo)","Junk",850,98.8,20,200],["Iridium 33 debris (demo)","Junk",780,86.4,250,300]].map(a=>({name:a[0],group:a[1],info:"Demo orbit simulation",fn:circ(a[2],a[3],a[4],a[5])}))}
+function fromTle(a){const sr=satellite.twoline2satrec(a.line1,a.line2);return{name:a.name,group:a.group,info:"Space-Track GP epoch "+a.epoch.slice(0,10),fn:d=>{const r=satellite.propagate(sr,d);if(!r.position)return null;const p=satellite.eciToGeodetic(r.position,satellite.gstime(d));const v=r.velocity?Math.sqrt(r.velocity.x**2+r.velocity.y**2+r.velocity.z**2).toFixed(2):"7.66";return{lat:satellite.degreesLat(p.latitude),lon:satellite.degreesLong(p.longitude),alt:Math.round(p.height),vel:v,period:92}}}}
 let objs=[],note="",real=false;
-try{const r=await fetch("snapshot.json",{cache:"no-store"});if(!r.ok)throw 0;const s=await r.json();
- objs=s.objects.map(a=>{try{return fromTle(a)}catch(e){return null}}).filter(Boolean);real=objs.length>0;note="[REAL_TIME] "+objs.length+" trackable objects loaded.";}catch(e){}
-if(!objs.length){objs=demo();note="[SIMULATION_MODE] Demo orbits active.";}
+try{const r=await fetch("snapshot.json",{cache:"no-store"});if(r.ok){const s=await r.json();objs=s.objects.map(a=>{try{return fromTle(a)}catch(e){return null}}).filter(Boolean);real=objs.length>0;note="[REAL_TIME] "+objs.length+" telemetry targets online."}}catch(e){}
+if(!objs.length){objs=demo();note="[SIMULATION_MODE] Telemetry fallback demo active."}
+const clock=viewer.clock;clock.clockRange=Cesium.ClockRange.UNBOUNDED;clock.multiplier=1;clock.shouldAnimate=true;
 const groups={};
-objs.forEach(o=>{const pos=new Cesium.SampledPositionProperty(Cesium.ReferenceFrame.FIXED);let n=0;
- for(let k=-5400;k<=5400;k+=30){const t=Cesium.JulianDate.addSeconds(start,k,new Cesium.JulianDate()),p=o.fn(Cesium.JulianDate.toDate(t));if(!p)continue;pos.addSample(t,Cesium.Cartesian3.fromDegrees(p.lon,p.lat,p.alt*1000));n++}
- if(n<20)return;
- pos.setInterpolationOptions({interpolationDegree:3,interpolationAlgorithm:Cesium.LagrangePolynomialApproximation});
- o.color=COL[o.group]||Cesium.Color.fromCssColorString('#00ff66');
- o.entity=viewer.entities.add({name:o.name,position:pos,description:`<p>${o.group==="Junk"?"Debris Field":NAMES[o.group]||o.group}</p><p>${o.info}</p>`,
-  point:{pixelSize:5,color:o.color,outlineColor:Cesium.Color.BLACK,outlineWidth:1},
-  label:{show:false,text:o.name,font:"11px Fira Code, monospace",pixelOffset:new Cesium.Cartesian2(0,-16),showBackground:true,backgroundColor:Cesium.Color.BLACK.withAlpha(.8),scale:.9},
-  path:{show:false,leadTime:2700,trailTime:2700,width:2,material:o.color.withAlpha(.75)}});
- o.entity.isSat=true;
- (groups[o.group]=groups[o.group]||[]).push(o)});
-const live=objs.filter(o=>o.entity);
-const clock=viewer.clock;clock.startTime=Cesium.JulianDate.addSeconds(start,-5400,new Cesium.JulianDate());clock.stopTime=Cesium.JulianDate.addSeconds(start,5400,new Cesium.JulianDate());
-clock.currentTime=start.clone();clock.clockRange=Cesium.ClockRange.LOOP_STOP;clock.multiplier=30;clock.shouldAnimate=true;viewer.timeline.zoomTo(clock.startTime,clock.stopTime);
-document.getElementById("note").textContent=note;
+objs.forEach(o=>{const pos=new Cesium.CallbackProperty(time=>{const d=Cesium.JulianDate.toDate(time),p=o.fn(d);if(!p)return Cesium.Cartesian3.ZERO;return Cesium.Cartesian3.fromDegrees(p.lon,p.lat,p.alt*1000)},false);o.color=COL[o.group]||Cesium.Color.fromCssColorString('#00ff66');o.entity=viewer.entities.add({name:o.name,position:pos,point:{pixelSize:6,color:o.color,outlineColor:Cesium.Color.BLACK,outlineWidth:1},label:{show:false,text:o.name,font:"11px Fira Code, monospace",pixelOffset:new Cesium.Cartesian2(0,-16),showBackground:true,backgroundColor:Cesium.Color.BLACK.withAlpha(.8)}});o.entity.isSat=true;o.entity.satData=o;(groups[o.group]=groups[o.group]||[]).push(o)});
+const live=objs.filter(o=>o.entity);document.getElementById("note").textContent=note;
 const gdiv=document.getElementById("groups");
-Object.keys(groups).forEach(g=>{const l=document.createElement("label");l.className="g";const cb=document.createElement("input");cb.type="checkbox";cb.checked=true;
- cb.onchange=()=>{groups[g].forEach(o=>o.entity.show=cb.checked);refresh()};l.append(cb,(NAMES[g]||g)+" ["+groups[g].length+"]");gdiv.appendChild(l);
- const ul=document.createElement("ul");groups[g].slice(0,60).forEach(o=>{const li=document.createElement("li"),b=document.createElement("button");b.textContent=o.name;
-  b.onclick=()=>{viewer.trackedEntity=o.entity;viewer.selectedEntity=o.entity};li.appendChild(b);ul.appendChild(li)});gdiv.appendChild(ul)});
+Object.keys(groups).forEach(g=>{const l=document.createElement("label");l.className="g";const cb=document.createElement("input");cb.type="checkbox";cb.checked=true;cb.onchange=()=>{groups[g].forEach(o=>o.entity.show=cb.checked);refresh()};l.append(cb,(NAMES[g]||g)+" ["+groups[g].length+"]");gdiv.appendChild(l);const ul=document.createElement("ul");groups[g].slice(0,60).forEach(o=>{const li=document.createElement("li"),b=document.createElement("button");b.textContent=o.name;b.onclick=()=>selectSatellite(o);li.appendChild(b);ul.appendChild(li)});gdiv.appendChild(ul)});
 let countries=[],hl=[],cur=null;
 const inRing=(x,y,r)=>{let c=false;for(let i=0,j=r.length-1;i<r.length;j=i++){const a=r[i],b=r[j];if((a[1]>y)!==(b[1]>y)&&x<(b[0]-a[0])*(y-a[1])/(b[1]-a[1])+a[0])c=!c}return c};
 const inCountry=(c,lon,lat)=>c.polys.some(p=>inRing(lon,lat,p[0])&&!p.slice(1).some(h=>inRing(lon,lat,h)));
-try{
- const topo=await (await fetch("https://cdn.jsdelivr.net/npm/world-atlas@2.0.2/countries-110m.json")).json();
- const fc=topojson.feature(topo,topo.objects.countries);
- countries=fc.features.filter(f=>f.geometry&&f.properties.name).map(f=>({name:f.properties.name,polys:f.geometry.type==="Polygon"?[f.geometry.coordinates]:f.geometry.coordinates}));
- countries.sort((a,b)=>a.name.localeCompare(b.name));
- const sel=document.getElementById("country");
- countries.forEach((c,i)=>{const o=document.createElement("option");o.value=i;o.textContent=c.name;sel.appendChild(o);
-  c.polys.forEach(p=>viewer.entities.add({polyline:{positions:Cesium.Cartesian3.fromDegreesArrayHeights(p[0].flatMap(q=>[q[0],q[1],4000])),width:1,material:Cesium.Color.fromCssColorString("#00ff66").withAlpha(.35)}}))});
-}catch(e){document.getElementById("above").innerHTML="<p>[ERROR] Could not load sector map boundaries.</p>"}
-function pickCountry(c,fly){hl.forEach(e=>viewer.entities.remove(e));hl=[];cur=c;
- document.getElementById("country").value=c?countries.indexOf(c):"";
- if(c){c.polys.forEach(p=>hl.push(viewer.entities.add({polygon:{hierarchy:new Cesium.PolygonHierarchy(Cesium.Cartesian3.fromDegreesArray(p[0].flat()),p.slice(1).map(h=>new Cesium.PolygonHierarchy(Cesium.Cartesian3.fromDegreesArray(h.flat())))),material:Cesium.Color.fromCssColorString("#00ff66").withAlpha(.2),height:0}})));
-  if(fly){let a=1e9,b=1e9,x=-1e9,y=-1e9;c.polys.forEach(p=>p[0].forEach(q=>{a=Math.min(a,q[0]);x=Math.max(x,q[0]);b=Math.min(b,q[1]);y=Math.max(y,q[1])}));
-   if(x-a>180){a=-180;x=180}const pad=Math.max(3,(x-a)*.4);viewer.camera.flyTo({destination:Cesium.Rectangle.fromDegrees(Math.max(-180,a-pad),Math.max(-85,b-pad),Math.min(180,x+pad),Math.min(85,y+pad))})}}
- refresh()}
-function refresh(){const el=document.getElementById("above"),t=viewer.clock.currentTime,hits=[];
- live.forEach(o=>{let hit=false;if(cur&&o.entity.show){const p=o.entity.position.getValue(t);if(p){const g=Cesium.Cartographic.fromCartesian(p);hit=inCountry(cur,Cesium.Math.toDegrees(g.longitude),Cesium.Math.toDegrees(g.latitude));if(hit)hits.push({o,alt:Math.round(g.height/1000)})}}
-  const e=o.entity;e.point.pixelSize=hit?12:5;e.point.color=hit?Cesium.Color.fromCssColorString("#00ffff"):o.color;e.label.show=hit;e.path.show=hit});
- if(!cur){el.innerHTML="<p>Select sector to initialize satellite trace.</p>";return}
- el.innerHTML=`<p><b>[${hits.length}]</b> ${real?"":"demo "}targets over sector <b>${cur.name}</b></p>`;
- const ul=document.createElement("ul");hits.sort((a,b)=>a.o.name.localeCompare(b.o.name)).forEach(h=>{const li=document.createElement("li"),b=document.createElement("button");
-  b.textContent=`> ${h.o.name} | ${h.alt} km`;b.onclick=()=>{viewer.trackedEntity=h.o.entity;viewer.selectedEntity=h.o.entity};li.appendChild(b);ul.appendChild(li)});el.appendChild(ul)}
-document.getElementById("country").onchange=e=>pickCountry(e.target.value===""?null:countries[+e.target.value],true);
-document.getElementById("clear").onclick=()=>pickCountry(null);
-viewer.screenSpaceEventHandler.setInputAction(m=>{const pk=viewer.scene.pick(m.position);
- if(pk&&pk.id&&pk.id.isSat){viewer.selectedEntity=pk.id;return}
- viewer.selectedEntity=undefined;
- const cart=viewer.camera.pickEllipsoid(m.position,viewer.scene.globe.ellipsoid);if(!cart)return;
- const g=Cesium.Cartographic.fromCartesian(cart),lon=Cesium.Math.toDegrees(g.longitude),lat=Cesium.Math.toDegrees(g.latitude);
- pickCountry(countries.find(c=>inCountry(c,lon,lat))||null,false)},Cesium.ScreenSpaceEventType.LEFT_CLICK);
-let lastRef=0;viewer.clock.onTick.addEventListener(()=>{const n=Date.now();if(cur&&n-lastRef>1000){lastRef=n;refresh()}});
-document.querySelectorAll(".vid button").forEach(b=>b.onclick=()=>{const c=b.dataset.c,v=document.getElementById("vframe");
- v.innerHTML=c?`<iframe src="https://www.youtube.com/embed/live_stream?channel=${c}&autoplay=1&mute=1" title="Live video" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe>`:""});
-const panel=document.getElementById("panel"),hide=document.getElementById("hide");
-hide.onclick=()=>{const c=[...panel.children].filter(x=>x!==hide),h=hide.textContent==="Hide";c.forEach(x=>x.style.display=h?"none":"");hide.textContent=h?"Show":"Hide"};
+try{loaderText.textContent="[SYS_MAP] Loading vector sector boundaries...";const topo=await(await fetch("https://cdn.jsdelivr.net/npm/world-atlas@2.0.2/countries-110m.json")).json();const fc=topojson.feature(topo,topo.objects.countries);countries=fc.features.filter(f=>f.geometry&&f.properties.name).map(f=>({name:f.properties.name,polys:f.geometry.type==="Polygon"?[f.geometry.coordinates]:f.geometry.coordinates}));countries.sort((a,b)=>a.name.localeCompare(b.name));const sel=document.getElementById("country");countries.forEach((c,i)=>{const o=document.createElement("option");o.value=i;o.textContent=c.name;sel.appendChild(o);c.polys.forEach(p=>viewer.entities.add({polyline:{positions:Cesium.Cartesian3.fromDegreesArrayHeights(p[0].flatMap(q=>[q[0],q[1],4000])),width:1,material:Cesium.Color.fromCssColorString("#00ff66").withAlpha(.35)}}))})}catch(e){document.getElementById("above").innerHTML="<p>[ERROR] Could not load sector map boundaries.</p>"}
+function pickCountry(c,fly){hl.forEach(e=>viewer.entities.remove(e));hl=[];cur=c;document.getElementById("country").value=c?countries.indexOf(c):"";if(c){c.polys.forEach(p=>hl.push(viewer.entities.add({polygon:{hierarchy:new Cesium.PolygonHierarchy(Cesium.Cartesian3.fromDegreesArray(p[0].flat()),p.slice(1).map(h=>new Cesium.PolygonHierarchy(Cesium.Cartesian3.fromDegreesArray(h.flat())))),material:Cesium.Color.fromCssColorString("#00ff66").withAlpha(.2),height:0}})));if(fly){let a=1e9,b=1e9,x=-1e9,y=-1e9;c.polys.forEach(p=>p[0].forEach(q=>{a=Math.min(a,q[0]);x=Math.max(x,q[0]);b=Math.min(b,q[1]);y=Math.max(y,q[1])}));if(x-a>180){a=-180;x=180}const pad=Math.max(3,(x-a)*.4);viewer.camera.flyTo({destination:Cesium.Rectangle.fromDegrees(Math.max(-180,a-pad),Math.max(-85,b-pad),Math.min(180,x+pad),Math.min(85,y+pad))})}}refresh()}
+function refresh(){const el=document.getElementById("above"),t=viewer.clock.currentTime,hits=[],d=Cesium.JulianDate.toDate(t);live.forEach(o=>{let hit=false;if(cur&&o.entity.show){const p=o.fn(d);if(p){hit=inCountry(cur,p.lon,p.lat);if(hit)hits.push({o,alt:Math.round(p.alt)})}}const e=o.entity;e.point.pixelSize=hit?12:6;e.point.color=hit?Cesium.Color.fromCssColorString("#00ffff"):o.color;e.label.show=hit});if(!cur){el.innerHTML="<p>Select sector to initialize satellite trace.</p>";return}el.innerHTML=`<p><b>[${hits.length}]</b> ${real?"":"demo "}targets over sector <b>${cur.name}</b></p>`;const ul=document.createElement("ul");hits.sort((a,b)=>a.o.name.localeCompare(b.o.name)).forEach(h=>{const li=document.createElement("li"),b=document.createElement("button");b.textContent=`> ${h.o.name} | ${h.alt} km`;b.onclick=()=>selectSatellite(h.o);li.appendChild(b);ul.appendChild(li)});el.appendChild(ul)}
+let trackedSat=null;const infoPanel=document.getElementById("info-panel");
+function selectSatellite(o){trackedSat=o;viewer.trackedEntity=o.entity;viewer.selectedEntity=o.entity;infoPanel.style.display="block";updateInfo()}
+function stopTracking(){trackedSat=null;viewer.trackedEntity=undefined;viewer.selectedEntity=undefined;infoPanel.style.display="none"}
+function updateInfo(){if(!trackedSat)return;const d=Cesium.JulianDate.toDate(viewer.clock.currentTime),p=trackedSat.fn(d);if(!p)return;document.getElementById("info-name").textContent=trackedSat.name;document.getElementById("info-group").textContent=trackedSat.group;document.getElementById("info-alt").textContent=p.alt+" km";document.getElementById("info-lat").textContent=p.lat.toFixed(2)+"°";document.getElementById("info-lon").textContent=p.lon.toFixed(2)+"°";document.getElementById("info-vel").textContent=p.vel+" km/s";document.getElementById("info-period").textContent=p.period+" min"}
+document.getElementById("info-close").onclick=stopTracking;document.getElementById("info-dock").onclick=()=>infoPanel.classList.toggle("docked-side");
+document.getElementById("country").onchange=e=>pickCountry(e.target.value===""?null:countries[+e.target.value],true);document.getElementById("clear").onclick=()=>pickCountry(null);
+viewer.screenSpaceEventHandler.setInputAction(m=>{const pk=viewer.scene.pick(m.position);if(pk&&pk.id&&pk.id.isSat){selectSatellite(pk.id.satData);return}const cart=viewer.camera.pickEllipsoid(m.position,viewer.scene.globe.ellipsoid);if(cart){const g=Cesium.Cartographic.fromCartesian(cart),lon=Cesium.Math.toDegrees(g.longitude),lat=Cesium.Math.toDegrees(g.latitude);const hitC=countries.find(c=>inCountry(c,lon,lat));pickCountry(hitC||null,false)}else pickCountry(null,false)},Cesium.ScreenSpaceEventType.LEFT_CLICK);
+const panelBody=document.getElementById("panel-body"),hideBtn=document.getElementById("hide");hideBtn.onclick=()=>{const col=panelBody.classList.toggle("collapsed");hideBtn.textContent=col?"Show":"Hide"};
+const btnPause=document.getElementById("btn-pause"),timeDisplay=document.getElementById("time-display");
+btnPause.onclick=()=>{clock.shouldAnimate=!clock.shouldAnimate;btnPause.textContent=clock.shouldAnimate?"❚❚":"▶";btnPause.classList.toggle("active",!clock.shouldAnimate)};
+document.getElementById("btn-live").onclick=()=>{clock.currentTime=Cesium.JulianDate.now();clock.multiplier=1;clock.shouldAnimate=true;btnPause.textContent="❚❚";document.querySelectorAll(".speed-btn").forEach(b=>b.classList.toggle("active",b.dataset.s==="1"))};
+document.querySelectorAll(".speed-btn").forEach(b=>{b.onclick=()=>{clock.multiplier=parseFloat(b.dataset.s);document.querySelectorAll(".speed-btn").forEach(x=>x.classList.remove("active"));b.classList.add("active")}});
+let lastRef=0;viewer.clock.onTick.addEventListener(()=>{const now=Date.now(),iso=Cesium.JulianDate.toDate(clock.currentTime).toISOString().replace("T"," ").slice(0,19)+" UTC";timeDisplay.textContent=iso;if(trackedSat)updateInfo();if(cur&&now-lastRef>1000){lastRef=now;refresh()}});
+document.querySelectorAll(".vid button").forEach(b=>b.onclick=()=>{const c=b.dataset.c,v=document.getElementById("vframe");v.innerHTML=c?`<iframe src="https://www.youtube.com/embed/live_stream?channel=${c}&autoplay=1&mute=1" title="Live video" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe>`:""});
+setTimeout(()=>loader.classList.add("hidden"),800);
 })();
 </script>
 </body>
