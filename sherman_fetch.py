@@ -1,31 +1,19 @@
 #!/usr/bin/env python3
-"""Fetch a small Space-Track snapshot for S.H.E.R.M.A.N and save it as snapshot.json.
-
-Usage:
-    export SPACETRACK_USER="you@example.com"
-    export SPACETRACK_PASS="your_password"
-    python3 sherman_fetch.py            # refuses to run if snapshot is under 4 hours old
-    python3 sherman_fetch.py --force    # override that check
-
-Then open the S.H.E.R.M.A.N page and use "Load snapshot" to pick snapshot.json.
-Credentials stay on your machine; they never go into the web page.
-Standard library only.
-"""
 import os, sys, json, time, urllib.parse, urllib.request, http.cookiejar
 
 BASE = "https://www.space-track.org"
 OUT = "snapshot.json"
 GP = "/basicspacedata/query/class/gp"
 FIELDS = "/predicates/NORAD_CAT_ID,OBJECT_NAME,EPOCH,TLE_LINE1,TLE_LINE2/format/json"
-PAUSE = 3  # seconds between queries; the limit is 30 per minute
+PAUSE = 3
 
-# (group shown in the page, query path). "%3E" is ">" and "~~" is a name-prefix match.
 QUERIES = [
-    ("NASA", GP + "/NORAD_CAT_ID/25544,20580,25994,27424,49260" + FIELDS),  # ISS, Hubble, Terra, Aqua, Landsat 9
-    ("SpaceX", GP + "/OBJECT_NAME/STARLINK~~/EPOCH/%3Enow-3/orderby/NORAD_CAT_ID%20asc/limit/12" + FIELDS),
+    ("NASA", GP + "/NORAD_CAT_ID/25544,20580,25994,27424,49260" + FIELDS),
+    ("SpaceX", GP + "/OBJECT_NAME/STARLINK~~/EPOCH/%3Enow-3/orderby/NORAD_CAT_ID%20asc/limit/150" + FIELDS),
     ("SpaceX", GP + "/OBJECT_NAME/CREW%20DRAGON~~/EPOCH/%3Enow-10/limit/3" + FIELDS),
+    ("Other", GP + "/OBJECT_TYPE/PAYLOAD/DECAY_DATE/null-val/EPOCH/%3Enow-3/orderby/NORAD_CAT_ID%20asc/limit/150" + FIELDS),
 ] + [
-    ("Junk", GP + "/OBJECT_NAME/" + urllib.parse.quote(n) + "~~/EPOCH/%3Enow-30/limit/5" + FIELDS)
+    ("Junk", GP + "/OBJECT_NAME/" + urllib.parse.quote(n) + "~~/EPOCH/%3Enow-30/limit/15" + FIELDS)
     for n in ("COSMOS 2251 DEB", "FENGYUN 1C DEB", "IRIDIUM 33 DEB")
 ]
 
@@ -48,7 +36,7 @@ def main():
         for group, path in QUERIES:
             try:
                 rows = json.loads(opener.open(BASE + path).read().decode())
-            except Exception as e:  # HTTP 500 usually means throttling
+            except Exception as e:
                 print("Query failed:", path[:80], e)
                 rows = []
             for r in rows:
