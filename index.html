@@ -7,14 +7,17 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/cesium@1.120.0/Build/Cesium/Widgets/widgets.css">
 <style>
 html,body,#globe{margin:0;width:100%;height:100%;overflow:hidden;background:#000;font:14px/1.45 system-ui,sans-serif}
-#panel{position:absolute;top:10px;left:10px;z-index:5;width:min(330px,calc(100% - 20px));max-height:calc(100% - 20px);overflow-y:auto;background:rgba(10,20,34,.9);color:#e6edf5;border:1px solid #22344b;border-radius:6px;padding:12px}
+#panel{position:absolute;top:10px;left:10px;z-index:5;width:min(340px,calc(100% - 20px));max-height:calc(100% - 20px);overflow-y:auto;background:rgba(10,20,34,.92);color:#e6edf5;border:1px solid #22344b;border-radius:6px;padding:12px}
 h1{margin:0 0 2px;font-size:22px;letter-spacing:.08em}
 p{margin:0 0 8px;color:#8da0b5;font-size:12px}
+select{width:100%;background:#1b2d45;color:#e6edf5;border:1px solid #2c4666;border-radius:4px;padding:6px;font:inherit}
 label.g{display:flex;gap:6px;align-items:center;margin:6px 0 2px;font-weight:600}
-ul{list-style:none;margin:0 0 6px;padding:0;max-height:26vh;overflow-y:auto}
+ul{list-style:none;margin:0 0 6px;padding:0;max-height:24vh;overflow-y:auto}
 li button{display:block;width:100%;text-align:left;background:none;border:0;color:inherit;padding:4px 6px;border-radius:4px;cursor:pointer;font:inherit}
 li button:hover,li button:focus-visible{background:#1b2d45;outline:none}
-.vid button{background:#1b2d45;color:#e6edf5;border:1px solid #2c4666;border-radius:4px;padding:4px 10px;cursor:pointer;margin-right:6px}
+.sec{border-top:1px solid #22344b;margin-top:10px;padding-top:10px}
+#above b{color:#ffd24a}
+.vid button,#clear{background:#1b2d45;color:#e6edf5;border:1px solid #2c4666;border-radius:4px;padding:4px 10px;cursor:pointer;margin-right:6px}
 .vid iframe{width:100%;aspect-ratio:16/9;border:0;margin-top:8px;background:#000}
 #hide{float:right;background:none;border:0;color:#8da0b5;cursor:pointer}
 </style>
@@ -25,10 +28,14 @@ li button:hover,li button:focus-visible{background:#1b2d45;outline:none}
 <button id="hide" aria-label="Hide panel">Hide</button>
 <h1>S.H.E.R.M.A.N</h1>
 <p id="note">Loading…</p>
-<div id="groups"></div>
-<div class="vid"><b>Live video</b><br>
+<label for="country"><b>Country</b></label>
+<select id="country"><option value="">Pick a country, or click one on the map</option></select>
+<div id="above" aria-live="polite"><p>Pick a country to see which satellites are above it.</p></div>
+<button id="clear">Clear selection</button>
+<div class="sec" id="groups"></div>
+<div class="sec vid"><b>Live video</b><br>
 <button data-c="UCLA_DiR1FfKNvjuUpBHmylQ">NASA</button><button data-c="UCtI0Hodo5o5dUb67FeUjDeA">SpaceX</button><button data-c="">Close</button>
-<div id="vframe"></div><p>Plays the channel's current live stream. Blank means it is not live or embedding is off.</p></div>
+<div id="vframe"></div></div>
 </div>
 <script>
 window.CESIUM_BASE_URL="https://cdn.jsdelivr.net/npm/cesium@1.120.0/Build/Cesium/";
@@ -36,6 +43,7 @@ const ION_TOKEN="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJub25jZSI6InNqblJocy0wWV
 </script>
 <script src="https://cdn.jsdelivr.net/npm/cesium@1.120.0/Build/Cesium/Cesium.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/satellite.js@5.0.0/dist/satellite.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/topojson-client@3.1.0/dist/topojson-client.min.js"></script>
 <script>
 (async()=>{
 const viewer=new Cesium.Viewer("globe",{baseLayer:false,baseLayerPicker:false,geocoder:false,homeButton:true,sceneModePicker:true,navigationHelpButton:false,infoBox:true,selectionIndicator:true,timeline:true,animation:true,fullscreenButton:true});
@@ -44,11 +52,11 @@ try{
  else viewer.imageryLayers.add(Cesium.ImageryLayer.fromProviderAsync(Cesium.TileMapServiceImageryProvider.fromUrl(Cesium.buildModuleUrl("Assets/Textures/NaturalEarthII"))));
 }catch(e){console.warn("imagery failed",e)}
 viewer.scene.globe.enableLighting=true;
-const COL={NASA:Cesium.Color.DODGERBLUE,SpaceX:Cesium.Color.WHITE,Junk:Cesium.Color.RED};
-const NAMES={NASA:"NASA satellites",SpaceX:"SpaceX satellites",Junk:"Space junk"};
+const COL={NASA:Cesium.Color.DODGERBLUE,SpaceX:Cesium.Color.WHITE,Junk:Cesium.Color.RED,Other:Cesium.Color.LIGHTGRAY};
+const NAMES={NASA:"NASA satellites",SpaceX:"SpaceX satellites",Junk:"Space junk",Other:"Other satellites"};
 const MU=398600.4418,RE=6378.137,WE=7.2921159e-5,D=Math.PI/180;
-const start=Cesium.JulianDate.now();
-function circ(alt,inc,raan,ph){const r=RE+alt,n=Math.sqrt(MU/r**3);return d=>{const t=(d-start.dayNumber*0)/1000%1e9;const s=(d.getTime()-Cesium.JulianDate.toDate(start).getTime())/1000,u=ph*D+n*s,c=Math.cos,sn=Math.sin,I=inc*D,R=raan*D;
+const start=Cesium.JulianDate.now(),startMs=Cesium.JulianDate.toDate(start).getTime();
+function circ(alt,inc,raan,ph){const r=RE+alt,n=Math.sqrt(MU/r**3);return d=>{const s=(d.getTime()-startMs)/1000,u=ph*D+n*s,c=Math.cos,sn=Math.sin,I=inc*D,R=raan*D;
 const x=c(R)*c(u)-sn(R)*sn(u)*c(I),y=sn(R)*c(u)+c(R)*sn(u)*c(I),z=sn(u)*sn(I);let lon=Math.atan2(y,x)-WE*s;lon=((lon+Math.PI)%(2*Math.PI)+2*Math.PI)%(2*Math.PI)-Math.PI;return{lat:Math.asin(z)/D,lon:lon/D,alt}}}
 function demo(){return[["ISS (demo)","NASA",420,51.6,40,10],["Hubble (demo)","NASA",535,28.5,200,80],["Terra (demo)","NASA",705,98.2,110,150],["Landsat 9 (demo)","NASA",705,98.2,60,330],
 ["Starlink A (demo)","SpaceX",550,53,10,0],["Starlink B (demo)","SpaceX",560,97.6,150,120],["Crew Dragon (demo)","SpaceX",420,51.6,40,25],
@@ -57,29 +65,65 @@ function demo(){return[["ISS (demo)","NASA",420,51.6,40,10],["Hubble (demo)","NA
 function fromTle(a){const sr=satellite.twoline2satrec(a.line1,a.line2);
 return{name:a.name,group:a.group,info:"Space-Track gp, epoch "+a.epoch.slice(0,10),fn:d=>{const r=satellite.propagate(sr,d);if(!r.position)return null;
 const p=satellite.eciToGeodetic(r.position,satellite.gstime(d));return{lat:satellite.degreesLat(p.latitude),lon:satellite.degreesLong(p.longitude),alt:p.height}}}}
-let objs=[],note="";
+let objs=[],note="",real=false;
 try{const r=await fetch("snapshot.json",{cache:"no-store"});if(!r.ok)throw 0;const s=await r.json();
- objs=s.objects.map(a=>{try{return fromTle(a)}catch(e){return null}}).filter(Boolean);note="Real orbits, "+objs.length+" objects, data from "+s.fetched+"."}catch(e){}
-if(!objs.length){objs=demo();note="Demo orbits. Add snapshot.json (see README) for real satellites."}
-const startDate=Cesium.JulianDate.toDate(start),groups={};
-objs.forEach((o,i)=>{const pos=new Cesium.SampledPositionProperty(Cesium.ReferenceFrame.FIXED);let n=0;
+ objs=s.objects.map(a=>{try{return fromTle(a)}catch(e){return null}}).filter(Boolean);real=objs.length>0;note="Real orbits: "+objs.length+" objects, data from "+s.fetched+"."}catch(e){}
+if(!objs.length){objs=demo();note="Demo orbits."}
+const groups={};
+objs.forEach(o=>{const pos=new Cesium.SampledPositionProperty(Cesium.ReferenceFrame.FIXED);let n=0;
  for(let k=-5400;k<=5400;k+=30){const t=Cesium.JulianDate.addSeconds(start,k,new Cesium.JulianDate()),p=o.fn(Cesium.JulianDate.toDate(t));if(!p)continue;pos.addSample(t,Cesium.Cartesian3.fromDegrees(p.lon,p.lat,p.alt*1000));n++}
  if(n<20)return;
  pos.setInterpolationOptions({interpolationDegree:3,interpolationAlgorithm:Cesium.LagrangePolynomialApproximation});
- const c=COL[o.group]||Cesium.Color.YELLOW;
- o.entity=viewer.entities.add({name:o.name,position:pos,description:`<p>${o.group==="Junk"?"Space debris":o.group+" satellite"}</p><p>${o.info}</p>`,
-  point:{pixelSize:8,color:c,outlineColor:Cesium.Color.BLACK,outlineWidth:1},
-  label:{text:o.name,font:"12px sans-serif",pixelOffset:new Cesium.Cartesian2(0,-16),showBackground:true,backgroundColor:Cesium.Color.BLACK.withAlpha(.6),scale:.9,distanceDisplayCondition:new Cesium.DistanceDisplayCondition(0,2.5e7)},
-  path:{leadTime:2700,trailTime:2700,width:2,material:c.withAlpha(.75)}});
+ o.color=COL[o.group]||Cesium.Color.YELLOW;
+ o.entity=viewer.entities.add({name:o.name,position:pos,description:`<p>${o.group==="Junk"?"Space debris":NAMES[o.group]||o.group}</p><p>${o.info}</p>`,
+  point:{pixelSize:6,color:o.color,outlineColor:Cesium.Color.BLACK,outlineWidth:1},
+  label:{show:false,text:o.name,font:"12px sans-serif",pixelOffset:new Cesium.Cartesian2(0,-16),showBackground:true,backgroundColor:Cesium.Color.BLACK.withAlpha(.6),scale:.9},
+  path:{show:false,leadTime:2700,trailTime:2700,width:2,material:o.color.withAlpha(.75)}});
+ o.entity.isSat=true;
  (groups[o.group]=groups[o.group]||[]).push(o)});
+const live=objs.filter(o=>o.entity);
 const clock=viewer.clock;clock.startTime=Cesium.JulianDate.addSeconds(start,-5400,new Cesium.JulianDate());clock.stopTime=Cesium.JulianDate.addSeconds(start,5400,new Cesium.JulianDate());
 clock.currentTime=start.clone();clock.clockRange=Cesium.ClockRange.LOOP_STOP;clock.multiplier=30;clock.shouldAnimate=true;viewer.timeline.zoomTo(clock.startTime,clock.stopTime);
 document.getElementById("note").textContent=note;
 const gdiv=document.getElementById("groups");
 Object.keys(groups).forEach(g=>{const l=document.createElement("label");l.className="g";const cb=document.createElement("input");cb.type="checkbox";cb.checked=true;
- cb.onchange=()=>groups[g].forEach(o=>o.entity.show=cb.checked);l.append(cb,NAMES[g]||g);gdiv.appendChild(l);
- const ul=document.createElement("ul");groups[g].forEach(o=>{const li=document.createElement("li"),b=document.createElement("button");b.textContent=o.name;
+ cb.onchange=()=>{groups[g].forEach(o=>o.entity.show=cb.checked);refresh()};l.append(cb,(NAMES[g]||g)+" ("+groups[g].length+")");gdiv.appendChild(l);
+ const ul=document.createElement("ul");groups[g].slice(0,60).forEach(o=>{const li=document.createElement("li"),b=document.createElement("button");b.textContent=o.name;
   b.onclick=()=>{viewer.trackedEntity=o.entity;viewer.selectedEntity=o.entity};li.appendChild(b);ul.appendChild(li)});gdiv.appendChild(ul)});
+let countries=[],hl=[],cur=null;
+const inRing=(x,y,r)=>{let c=false;for(let i=0,j=r.length-1;i<r.length;j=i++){const a=r[i],b=r[j];if((a[1]>y)!==(b[1]>y)&&x<(b[0]-a[0])*(y-a[1])/(b[1]-a[1])+a[0])c=!c}return c};
+const inCountry=(c,lon,lat)=>c.polys.some(p=>inRing(lon,lat,p[0])&&!p.slice(1).some(h=>inRing(lon,lat,h)));
+try{
+ const topo=await (await fetch("https://cdn.jsdelivr.net/npm/world-atlas@2.0.2/countries-110m.json")).json();
+ const fc=topojson.feature(topo,topo.objects.countries);
+ countries=fc.features.filter(f=>f.geometry&&f.properties.name).map(f=>({name:f.properties.name,polys:f.geometry.type==="Polygon"?[f.geometry.coordinates]:f.geometry.coordinates}));
+ countries.sort((a,b)=>a.name.localeCompare(b.name));
+ const sel=document.getElementById("country");
+ countries.forEach((c,i)=>{const o=document.createElement("option");o.value=i;o.textContent=c.name;sel.appendChild(o);
+  c.polys.forEach(p=>viewer.entities.add({polyline:{positions:Cesium.Cartesian3.fromDegreesArrayHeights(p[0].flatMap(q=>[q[0],q[1],4000])),width:1,material:Cesium.Color.WHITE.withAlpha(.35)}}))});
+}catch(e){document.getElementById("above").innerHTML="<p>Country borders could not load. Check your internet connection and reload.</p>"}
+function pickCountry(c,fly){hl.forEach(e=>viewer.entities.remove(e));hl=[];cur=c;
+ document.getElementById("country").value=c?countries.indexOf(c):"";
+ if(c){c.polys.forEach(p=>hl.push(viewer.entities.add({polygon:{hierarchy:new Cesium.PolygonHierarchy(Cesium.Cartesian3.fromDegreesArray(p[0].flat()),p.slice(1).map(h=>new Cesium.PolygonHierarchy(Cesium.Cartesian3.fromDegreesArray(h.flat())))),material:Cesium.Color.YELLOW.withAlpha(.25),height:0}})));
+  if(fly){let a=1e9,b=1e9,x=-1e9,y=-1e9;c.polys.forEach(p=>p[0].forEach(q=>{a=Math.min(a,q[0]);x=Math.max(x,q[0]);b=Math.min(b,q[1]);y=Math.max(y,q[1])}));
+   if(x-a>180){a=-180;x=180}const pad=Math.max(3,(x-a)*.4);viewer.camera.flyTo({destination:Cesium.Rectangle.fromDegrees(Math.max(-180,a-pad),Math.max(-85,b-pad),Math.min(180,x+pad),Math.min(85,y+pad))})}}
+ refresh()}
+function refresh(){const el=document.getElementById("above"),t=viewer.clock.currentTime,hits=[];
+ live.forEach(o=>{let hit=false;if(cur&&o.entity.show){const p=o.entity.position.getValue(t);if(p){const g=Cesium.Cartographic.fromCartesian(p);hit=inCountry(cur,Cesium.Math.toDegrees(g.longitude),Cesium.Math.toDegrees(g.latitude));if(hit)hits.push({o,alt:Math.round(g.height/1000)})}}
+  const e=o.entity;e.point.pixelSize=hit?13:6;e.point.color=hit?Cesium.Color.YELLOW:o.color;e.label.show=hit;e.path.show=hit});
+ if(!cur){el.innerHTML="<p>Pick a country to see which satellites are above it.</p>";return}
+ el.innerHTML=`<p><b>${hits.length}</b> ${real?"":"demo "}object${hits.length===1?"":"s"} directly above ${cur.name} at the timeline time.</p>`;
+ const ul=document.createElement("ul");hits.sort((a,b)=>a.o.name.localeCompare(b.o.name)).forEach(h=>{const li=document.createElement("li"),b=document.createElement("button");
+  b.textContent=`${h.o.name} · ${NAMES[h.o.group]||h.o.group} · ${h.alt} km`;b.onclick=()=>{viewer.trackedEntity=h.o.entity;viewer.selectedEntity=h.o.entity};li.appendChild(b);ul.appendChild(li)});el.appendChild(ul)}
+document.getElementById("country").onchange=e=>pickCountry(e.target.value===""?null:countries[+e.target.value],true);
+document.getElementById("clear").onclick=()=>pickCountry(null);
+viewer.screenSpaceEventHandler.setInputAction(m=>{const pk=viewer.scene.pick(m.position);
+ if(pk&&pk.id&&pk.id.isSat){viewer.selectedEntity=pk.id;return}
+ viewer.selectedEntity=undefined;
+ const cart=viewer.camera.pickEllipsoid(m.position,viewer.scene.globe.ellipsoid);if(!cart)return;
+ const g=Cesium.Cartographic.fromCartesian(cart),lon=Cesium.Math.toDegrees(g.longitude),lat=Cesium.Math.toDegrees(g.latitude);
+ pickCountry(countries.find(c=>inCountry(c,lon,lat))||null,false)},Cesium.ScreenSpaceEventType.LEFT_CLICK);
+let lastRef=0;viewer.clock.onTick.addEventListener(()=>{const n=Date.now();if(cur&&n-lastRef>1000){lastRef=n;refresh()}});
 document.querySelectorAll(".vid button").forEach(b=>b.onclick=()=>{const c=b.dataset.c,v=document.getElementById("vframe");
  v.innerHTML=c?`<iframe src="https://www.youtube.com/embed/live_stream?channel=${c}&autoplay=1&mute=1" title="Live video" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe>`:""});
 const panel=document.getElementById("panel"),hide=document.getElementById("hide");
