@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 import os, sys, json, time, urllib.parse, urllib.request, http.cookiejar
 
 BASE = "https://www.space-track.org"
